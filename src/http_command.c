@@ -888,8 +888,12 @@ static void write_subrecord(struct record *r, WRBUF w,
     wrbuf_xmlputs(w,  *name ? name : "Unknown");
     wrbuf_puts(w, "\" ");
 
+    wrbuf_puts(w, "position=\"");
+    wrbuf_printf(w, "%d", r->position -1); // -1 because position counting is 1-based
+    wrbuf_puts(w, "\" ");
+
     wrbuf_puts(w, "checksum=\"");
-    wrbuf_printf(w,  "%u", r->checksum);
+    wrbuf_printf(w, "%u", r->checksum);
     wrbuf_puts(w, "\">\n");
 
     write_metadata(w, service, r->metadata, show_details, 2);
