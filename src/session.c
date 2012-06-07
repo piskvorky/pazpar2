@@ -2075,6 +2075,12 @@ void session_log(struct session *s, int level, const char *fmt, ...)
     va_end(ap);
 }
 
+struct record *session_get_ingested(struct session *s)
+{
+    return reclist_get_ingested(s->reclist);
+}
+
+
 /*
  * Local variables:
  * c-basic-offset: 4

@@ -74,6 +74,8 @@ struct record * record_create(NMEM nmem, int num_metadata, int num_sortkeys,
 
 struct record_metadata * record_metadata_create(NMEM nmem);
 
+struct record * record_copy(NMEM nmem, struct record *record);
+
 int record_compare(struct record *r1, struct record *r2, struct conf_service *service);
 
 struct record_cluster

@@ -1273,6 +1273,51 @@ static void cmd_show(struct http_channel *c)
     release_session(c, s);
 }
 
+/**
+ * Show a selected range of records. The range is given by <start, end) indices
+ * into a list of ingested records. The list of ingested records grows as new
+ * records come from remote targets; once a record is ingested, it is appended
+ * at the end and its index never changes.
+ *
+ * @param start: start at this index (default 0)
+ * @param end: end *before* this index (default -1 = return all ingested records
+ *             until the end
+ */
+static void cmd_ingested(struct http_channel *c)
+{
+    struct http_request  *rq = c->request;
+    struct http_response *rs = c->response;
+    struct http_session *s = locate_session(c);
+    const char *start = http_argbyname(rq, "start");
+    const char *end = http_argbyname(rq, "end");
+    struct record *all;
+    int startn = 0;
+    int endn = -1;
+    int i = 0;
+
+    if (!s) // session expired / does not exist
+        return;
+
+    if (start)
+        startn = atoi(start);
+    if (end)
+        endn = atoi(end);
+
+    yaz_log(YLOG_LOG, "Rendering ingested records[%d:%d]", startn, endn);
+    response_open(c, "ingested");
+
+    for (all = session_get_ingested(s->psession); all; all = all->next, i++)
+    {
+        if (endn >= 0 && i >= endn)
+            break;
+        if (i >= startn)
+            write_subrecord(all, c->wrbuf, s->psession->service, 1 /* render full details */);
+    }
+
+    response_close(c, "ingested");
+    release_session(c, s);
+}
+
 static void cmd_ping(struct http_channel *c)
 {
     struct http_session *s = locate_session(c);
@@ -1432,6 +1477,7 @@ struct {
     { "ping", cmd_ping },
     { "record", cmd_record },
     { "info", cmd_info },
+    { "ingested", cmd_ingested },
     {0,0}
 };
 

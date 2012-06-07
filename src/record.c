@@ -51,6 +51,19 @@ union data_types * data_types_assign(NMEM nmem,
 }
 
 
+/**
+ * Make a shallow copy of an existing record.
+ *
+ * @param nmem: memory allocator
+ */
+struct record * record_copy(NMEM nmem, struct record *record)
+{
+    struct record *result = nmem_malloc(nmem, sizeof(*result));
+    memcpy(result, record, sizeof(*result));
+    return result;
+}
+
+
 struct record * record_create(NMEM nmem, int num_metadata, int num_sortkeys,
                               struct client *client, int position)
 {
