@@ -1400,7 +1400,7 @@ static void cmd_stat(struct http_channel *c)
 
     if (stat.num_clients > 0)
     {
-    	progress = (stat.num_clients  - clients) / (float)stat.num_clients;
+        progress = (stat.num_clients  - clients) / (float)stat.num_clients;
     }
 
     response_open_no_status(c, "stat");

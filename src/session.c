@@ -1539,15 +1539,15 @@ static int check_record_filter(xmlNode *root, struct session_database *sdb)
             if (type)
             {
                 size_t len;
-		int substring;
+        int substring;
                 const char *eq;
 
                 if ((eq = strchr(s, '=')))
-		    substring = 0;
-		else if ((eq = strchr(s, '~')))
-		    substring = 1;
-		if (eq)
-		    len = eq - s;
+            substring = 0;
+        else if ((eq = strchr(s, '~')))
+            substring = 1;
+        if (eq)
+            len = eq - s;
                 else
                     len = strlen(s);
                 if (len == strlen((const char *)type) &&
@@ -1557,8 +1557,8 @@ static int check_record_filter(xmlNode *root, struct session_database *sdb)
                     if (value && *value)
                     {
                         if (!eq ||
-			    (substring && strstr((const char *) value, eq+1)) ||
-			    (!substring && !strcmp((const char *) value, eq + 1)))
+                (substring && strstr((const char *) value, eq+1)) ||
+                (!substring && !strcmp((const char *) value, eq + 1)))
                             match = 1;
                     }
                     xmlFree(value);

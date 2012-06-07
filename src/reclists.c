@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "session.h"
 #include "reclists.h"
 #include "jenkins_hash.h"
+#include "parameters.h"
 
 struct reclist
 {
@@ -441,6 +442,7 @@ struct record_cluster *reclist_insert(struct reclist *l,
         *p = new;
         l->num_records++;
     }
+
     yaz_mutex_leave(l->mutex);
     return cluster;
 }
