@@ -118,9 +118,9 @@ static int sc_main(
     yaz_log_init_prefix("pazpar2");
     yaz_log_xml_errors(0, YLOG_WARN);
 
-    while ((ret = options("dDf:h:l:p:R:tu:v:Vw:X", argv, argc, &arg)) != -2)
+    while ((ret = options("dDf:h:il:p:R:tu:v:Vw:X", argv, argc, &arg)) != -2)
     {
-	switch (ret)
+    switch (ret)
         {
         case 'd':
             global_parameters.dump_records++;
@@ -133,6 +133,9 @@ static int sc_main(
             break;
         case 'h':
             listener_override = arg;
+            break;
+        case 'i':
+            global_parameters.ingest_mode++;
             break;
         case 'l':
             yaz_log_init_file(arg);
@@ -180,6 +183,7 @@ static int sc_main(
                     "    -D                      Daemon mode (background)\n"
                     "    -f configfile           Configuration\n"
                     "    -h [host:]port          Listener port\n"
+                    "    -i                      Turn on ingest mode (-ii for ingest only)\n"
                     "    -l file                 Log to file\n"
                     "    -p pidfile              PID file\n"
                     "    -R recfile              HTTP recording file\n"
@@ -195,7 +199,7 @@ static int sc_main(
 #endif
                 );
             return 1;
-	}
+    }
     }
     if (!config_fname)
     {

@@ -87,6 +87,7 @@ struct parameters global_parameters =
     0,   // dump_records
     0,   // debug_mode
     0,   // predictable sessions
+    0,   // ingest mode
 };
 
 struct client_list {
@@ -1585,6 +1586,7 @@ static int ingest_to_cluster(struct client *cl,
     \retval 0 OK
     \retval -1 failure
     \retval -2 Filtered
+    \retval -3 only ingested (hardcore ingest mode)
 */
 int ingest_record(struct client *cl, const char *rec,
                   int record_no, NMEM nmem)
@@ -1851,6 +1853,22 @@ static int ingest_to_cluster(struct client *cl,
             xmlFree(value);
         return -2;
     }
+    if (global_parameters.ingest_mode > 0)
+    {
+        // ingest turned on -> append this new record to reclist.all_records
+        if (reclist_ingest(se->reclist, record))
+        {
+            session_log(se, YLOG_WARN, "Failed to append record to ingested list");
+        }
+    }
+
+    if (global_parameters.ingest_mode > 1)
+    {
+        // hardcore ingest mode -- don't even create clusters/termlist/merge records
+        // NOTE: reclist.num_records won't be updated, either
+        return -3;
+    }
+
     cluster = reclist_insert(se->reclist, service, record,
                              mergekey_norm, &se->total_merged);
     if (!cluster)
@@ -2078,6 +2096,17 @@ void session_log(struct session *s, int level, const char *fmt, ...)
 struct record *session_get_ingested(struct session *s)
 {
     return reclist_get_ingested(s->reclist);
+}
+
+int session_total_hits(struct session *se)
+{
+    struct client_list *l;
+    int total_hits = 0;
+
+    for (l = se->clients_active; l; l = l->next)
+        total_hits += client_get_hits(l->client);
+
+    return total_hits;
 }
 
 

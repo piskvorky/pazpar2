@@ -352,6 +352,33 @@ struct record *reclist_get_ingested(struct reclist *l)
     return l ? l->all_records : 0;
 }
 
+
+/**
+ * Append a new record at the end of the `all_records` list.
+ */
+int reclist_ingest(struct reclist *l, struct record *record)
+{
+    assert(l);
+    assert(record);
+
+    yaz_mutex_enter(l->mutex);
+
+    struct record *ingested_rec = record_copy(l->nmem, record);
+    ingested_rec->next = 0;
+    if (!l->all_records)
+    {
+        l->all_records = ingested_rec;
+    } else {
+        struct record *last = l->all_records;
+        for (; last->next; last = last->next); // skip to the end
+        last->next = ingested_rec;
+    }
+
+    yaz_mutex_leave(l->mutex);
+    return 0;
+}
+
+
 // Insert a record. Return record cluster (newly formed or pre-existing)
 struct record_cluster *reclist_insert(struct reclist *l,
                                       struct conf_service *service,
@@ -368,25 +395,9 @@ struct record_cluster *reclist_insert(struct reclist *l,
     assert(merge_key);
     assert(total);
 
-    yaz_mutex_enter(l->mutex);
-
-    if (1)
-    {
-        // append the new record at the end of `all_records`
-        struct record *ingested_rec = record_copy(l->nmem, record);
-        ingested_rec->next = 0;
-        if (!l->all_records)
-        {
-            l->all_records = ingested_rec;
-        } else {
-            struct record *last = l->all_records;
-            for (; last->next; last = last->next); // skip to the end
-            last->next = ingested_rec;
-        }
-    }
-
     bucket = jenkins_hash((unsigned char*) merge_key) % l->hash_size;
 
+    yaz_mutex_enter(l->mutex);
     for (p = &l->hashtable[bucket]; *p; p = &(*p)->hash_next)
     {
         // We found a matching record. Merge them

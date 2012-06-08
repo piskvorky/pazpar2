@@ -619,7 +619,7 @@ static void client_record_ingest(struct client *cl)
             }
             else
             {
-                /* OK = 0, -1 = failure, -2 = Filtered */
+                /* OK = 0, -1 = failure, -2 = Filtered, -3 = ingested only */
                 int rc = ingest_record(cl, xmlrec, cl->record_offset, nmem);
                 if (rc == -1)
                 {

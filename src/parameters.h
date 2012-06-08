@@ -27,6 +27,7 @@ struct parameters {
     int dump_records;
     int debug_mode;
     int predictable_sessions;
+    int ingest_mode;
 };
 extern struct parameters global_parameters;
 

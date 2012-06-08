@@ -183,8 +183,10 @@ int session_is_preferred_clients_ready(struct session *s);
 void session_apply_setting(struct session *se, char *dbname, char *setting, char *value);
 const char *session_setting_oneval(struct session_database *db, int offset);
 
+int session_total_hits(struct session *se);
 struct record *session_get_ingested(struct session *s);
 int ingest_record(struct client *cl, const char *rec, int record_no, NMEM nmem);
+
 void session_alert_watch(struct session *s, int what);
 void add_facet(struct session *s, const char *type, const char *value, int count);
 
