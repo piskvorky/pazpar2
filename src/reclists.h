@@ -55,6 +55,7 @@ int reclist_sortparms_cmp(struct reclist_sortparms *sort1, struct reclist_sortpa
 
 int reclist_ingest(struct reclist *l, struct record *record);
 struct record *reclist_get_ingested(struct reclist *l);
+int reclist_get_num_ingested(struct reclist *l);
 
 #endif
 

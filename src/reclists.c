@@ -37,10 +37,11 @@ struct reclist
     unsigned hash_size;
 
     int num_records;
+    int all_ingested_num;
     struct reclist_bucket *sorted_list;
     struct reclist_bucket *sorted_ptr;
     struct reclist_bucket **last;
-    struct record *all_records; // linked list of all records ingested in a session, in ingestion order
+    struct record *all_records; // linked list of all records ingested in a session, in ingestion order (last ingested is the head)
     NMEM nmem;
     YAZ_MUTEX mutex;
 };
@@ -315,6 +316,7 @@ struct reclist *reclist_create(NMEM nmem)
     res->sorted_list = 0;
     res->last = &res->sorted_list;
     res->all_records = 0;
+    res->all_ingested_num = 0;
 
     res->num_records = 0;
     res->mutex = 0;
@@ -347,6 +349,12 @@ int reclist_get_num_records(struct reclist *l)
     return 0;
 }
 
+int reclist_get_num_ingested(struct reclist *l)
+{
+    return l ? l->all_ingested_num : 0;
+}
+
+
 struct record *reclist_get_ingested(struct reclist *l)
 {
     return l ? l->all_records : 0;
@@ -354,7 +362,7 @@ struct record *reclist_get_ingested(struct reclist *l)
 
 
 /**
- * Append a new record at the end of the `all_records` list.
+ * Append a new record at the *start* of the `all_records` list.
  */
 int reclist_ingest(struct reclist *l, struct record *record)
 {
@@ -364,15 +372,9 @@ int reclist_ingest(struct reclist *l, struct record *record)
     yaz_mutex_enter(l->mutex);
 
     struct record *ingested_rec = record_copy(l->nmem, record);
-    ingested_rec->next = 0;
-    if (!l->all_records)
-    {
-        l->all_records = ingested_rec;
-    } else {
-        struct record *last = l->all_records;
-        for (; last->next; last = last->next); // skip to the end
-        last->next = ingested_rec;
-    }
+    ingested_rec->next = l->all_records;
+    l->all_records = ingested_rec;
+    l->all_ingested_num++;
 
     yaz_mutex_leave(l->mutex);
     return 0;

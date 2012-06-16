@@ -1275,14 +1275,16 @@ static void cmd_show(struct http_channel *c)
 
 
 /**
- * Show a selected range of records. The range is given by <start, end) indices
- * into a list of ingested records. The list of ingested records grows as new
- * records come from remote targets; once a record is ingested, it is appended
- * at the end and its index never changes.
+ * Show a selected set of records. The set is given by <start, end) indices
+ * into a list of ingested records. This list of ingested records grows as new
+ * records come from remote targets => once a record is ingested, its position
+ * never changes.
  *
- * @param start: start at this index (default 0)
+ * NOTE: the records from <start, end) are returned in reverse order.
+ *
+ * @param start: start at this index (default 0 = the first ingested record)
  * @param end: end *before* this index (default -1 = return all ingested records
- *             until the end
+ *             from `start` until the last ingested)
  */
 static void cmd_ingested(struct http_channel *c)
 {
@@ -1295,7 +1297,7 @@ static void cmd_ingested(struct http_channel *c)
     struct record *all;
     int startn = 0;
     int endn = -1;
-    int i = 0;
+    int i;
 
     if (!s) // session expired / does not exist
         return;
@@ -1305,20 +1307,29 @@ static void cmd_ingested(struct http_channel *c)
     if (end)
         endn = atoi(end);
 
+    reclist_enter(se->reclist);
+    i = reclist_get_num_ingested(se->reclist); // head starts at the "newest" record
+    if (endn < 0)
+        endn = i;
+
     yaz_log(YLOG_LOG, "Rendering ingested records[%d:%d]", startn, endn);
     response_open(c, "ingested");
 
     wrbuf_printf(c->wrbuf, "\n<activeclients>%d</activeclients>\n", session_active_clients(se));
     wrbuf_printf(c->wrbuf, "<total>%d</total>\n", session_total_hits(se));
+    wrbuf_printf(c->wrbuf, "<total_ingested>%d</total_ingested>\n", i);
     wrbuf_printf(c->wrbuf, "<start>%d</start>\n", startn);
+    wrbuf_printf(c->wrbuf, "<end>%d</end>\n", endn);
     wrbuf_puts(c->wrbuf, "<hit>\n");
-    for (all = session_get_ingested(se); all; all = all->next, i++)
-    {
-        if (endn >= 0 && i >= endn)
-            break;
-        if (i >= startn)
-            write_subrecord(all, c->wrbuf, se->service, 1 /* render full details */);
+
+    for (all = session_get_ingested(se); i > endn; i--, all = all->next);
+    for (; i > startn && i <= endn; i--, all = all->next) {
+        // writes the records in reverse order (endn-1 => startn), but whatever
+        // TODO: reverse these records to correct order, if ever needed
+        write_subrecord(all, c->wrbuf, se->service, 1 /* 1=render full details */);
     }
+    reclist_leave(se->reclist);
+
     wrbuf_puts(c->wrbuf, "</hit>\n");
 
     response_close(c, "ingested");
