@@ -1275,15 +1275,15 @@ static void cmd_show(struct http_channel *c)
 
 
 /**
- * Show a selected set of records. The set is given by <start, end) indices
+ * Show a selected set of records. The set is given by <start, start+num) indices
  * into a list of ingested records. This list of ingested records grows as new
  * records come from remote targets => once a record is ingested, its position
  * never changes.
  *
- * NOTE: the records from <start, end) are returned in reverse order.
+ * NOTE: the records from <start, start+num) are returned in reverse order.
  *
  * @param start: start at this index (default 0 = the first ingested record)
- * @param end: end *before* this index (default -1 = return all ingested records
+ * @param num: number of records to return (default -1 = return all ingested records
  *             from `start` until the last ingested)
  */
 static void cmd_ingested(struct http_channel *c)
@@ -1292,38 +1292,49 @@ static void cmd_ingested(struct http_channel *c)
     struct http_response *rs = c->response;
     struct http_session *s = locate_session(c);
     const char *start = http_argbyname(rq, "start");
-    const char *end = http_argbyname(rq, "end");
-    struct session *se = s->psession;
+    const char *num = http_argbyname(rq, "num");
+    struct session *se;
     struct record *all;
     int startn = 0;
-    int endn = -1;
+    int numn = -1;
     int i;
 
     if (!s) // session expired / does not exist
         return;
-
-    if (start)
-        startn = atoi(start);
-    if (end)
-        endn = atoi(end);
+    se = s->psession;
 
     reclist_enter(se->reclist);
-    i = reclist_get_num_ingested(se->reclist); // head starts at the "newest" record
-    if (endn < 0)
-        endn = i;
+    i = reclist_get_num_ingested(se->reclist);
+    if (start)
+        startn = atoi(start);
+    if (num)
+        numn = atoi(num);
 
-    yaz_log(YLOG_LOG, "Rendering ingested records[%d:%d]", startn, endn);
+    if (!i) {
+        startn = 0;
+        numn = 0;
+    } else {
+        startn %= (i + 1);
+        if (startn < 0)
+            startn += i;
+        if (numn < 0)
+            numn = i - startn;
+        numn %= (i + 1);
+    }
+
+    yaz_log(YLOG_LOG, "Rendering ingested records[%d:%d]", startn, startn + numn);
     response_open(c, "ingested");
 
     wrbuf_printf(c->wrbuf, "\n<activeclients>%d</activeclients>\n", session_active_clients(se));
     wrbuf_printf(c->wrbuf, "<total>%d</total>\n", session_total_hits(se));
     wrbuf_printf(c->wrbuf, "<total_ingested>%d</total_ingested>\n", i);
     wrbuf_printf(c->wrbuf, "<start>%d</start>\n", startn);
-    wrbuf_printf(c->wrbuf, "<end>%d</end>\n", endn);
+    wrbuf_printf(c->wrbuf, "<num>%d</num>\n", numn);
     wrbuf_puts(c->wrbuf, "<hit>\n");
 
-    for (all = session_get_ingested(se); i > endn; i--, all = all->next);
-    for (; i > startn && i <= endn; i--, all = all->next) {
+    for (i -= startn + numn, all = session_get_ingested(se); i; i--, all = all->next);
+    for (i = numn; i; i--, all = all->next)
+    {
         // writes the records in reverse order (endn-1 => startn), but whatever
         // TODO: reverse these records to correct order, if ever needed
         write_subrecord(all, c->wrbuf, se->service, 1 /* 1=render full details */);
